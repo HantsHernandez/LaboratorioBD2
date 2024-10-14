@@ -50,6 +50,53 @@ as return
 select * 
 from  consultasCliente(1);
 
+-- Procedimiento almacenados CRUD
+
+-- post
+create or alter procedure clinica.insertarTipoMedicamento 
+	@tipoMedicamento nvarchar(45)
+as begin
+	insert into clinica.tiposmedicamentos(tipoMedicamento) 
+	values(@tipoMedicamento);
+end;
+
+exec clinica.insertarTipoMedicamento 'Viral';
+
+-- update
+create or alter procedure clinica.actualizarTipoMedicamento
+	@idTipoMedicamento int,
+	@NombreMedicamento nvarchar(50)
+as begin
+	update clinica.tiposmedicamentos
+	set tipoMedicamento = @NombreMedicamento
+	where idTipoMedicamento =  @idTipoMedicamento
+end;
+
+exec clinica.actualizarTipoMedicamento 12,'Viral2';
+
+-- delete
+create or alter procedure clinica.eliminarTipoMedicamento
+	@idTipoMedicamento int
+as begin
+	delete clinica.tiposmedicamentos
+	where idTipoMedicamento =  @idTipoMedicamento
+end;
+
+exec clinica.eliminarTipoMedicamento 12;
+
+-- get
+create or alter procedure clinica.obtenerTipoMedicamento
+	@tipoMedicamento nvarchar(50)
+as begin
+	select * 
+	from clinica.tiposmedicamentos ctm
+	where ctm.tipoMedicamento like '%' + @tipoMedicamento + '%'
+end;
+
+exec clinica.obtenerTipoMedicamento 'Lax';
+
+select * from clinica.tiposmedicamentos;
+
 
 
 
