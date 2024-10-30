@@ -3,6 +3,44 @@ use clinica;
 
 -- PARTE 1
 
+-- EJERCICIO 1
+-- Crea un INSTEAD OF INSERT Trigger en la tabla citas de la base de datos clinica, 
+-- que verifique si un paciente tiene al menos 2 horas de diferencia entre las citas
+-- programadas antes de permitir la inserción de una nueva cita. Si el paciente ya tiene una 
+-- cita programada en las 2 horas previas a la nueva, el trigger debe evitar la inserción y lanzar 
+-- un mensaje de error indicando que el paciente ya tiene una cita en ese horario.
+
+
+create or alter trigger trgverificaciondisponibilidadpaciente
+on clinica.citas
+instead of insert
+as 
+begin
+    declare @idpaciente int;
+    declare @fechacita datetime;
+
+   
+    select @fechacita = i.fechahoracita, @idpaciente = i.idpaciente
+    from inserted i;
+
+    if not exists (
+        select 1 
+        from clinica.citas 
+        where idpaciente = @idpaciente 
+        and abs(datediff(minute, fechahoracita, @fechacita)) < 120
+    )
+    begin
+        insert into clinica.citas (idpaciente, idtipocita, fechahoracita) 
+        select idpaciente, idtipocita, fechahoracita 
+        from inserted;
+    end
+    else
+    begin
+        raiserror('el paciente ya tiene una cita programada en las 2 horas previas a esta.', 16, 1);
+    end
+end;
+
+
 --	EJERCICIO 2
 -- Prevenir Actualización de Factura/Reservación: Crea un INSTEAD OF 
 -- UPDATE Trigger que impida cambiar el estado de un pedido o reservación 
@@ -160,7 +198,9 @@ update clinica.procedimientosmedicos
 set duracion = '01:00:00'
 where idProcedimiento =1;
 
+
 -- PARTE 2
+
 
 -- EJERCICIO 1 
 
@@ -210,8 +250,34 @@ select * from facturasConsultasReporte;
 drop trigger clinica.trgActualizarPrecio;
 drop table facturasConsultasReporte;
 
+-- EjJERCICIO 2
 
--- EJERCICIO 4
+-- Crea un AFTER UPDATE Trigger en la tabla de consultas que registre la información de la 
+-- última consulta de cada paciente en una tabla ultimas_consultas. Este registro debe incluir 
+-- la fecha de la última consulta, el doctor que lo atendió y el identificador de la consulta.
+
+create table ultimaConsulta(
+	idUltimaConsulta int primary key identity(1,1),
+	idPaciente int,
+	idConsulta int,
+	fecha date
+)
+
+create or alter trigger trgUltimaConsulta
+on clinica.consultas
+after insert
+as begin 
+	insert into ultimaConsulta(idPaciente, idConsulta, fecha) 
+	select	ci.idPaciente,
+			i.idConsulta,
+			getdate()
+	from inserted i
+	inner join clinica.citas  ci on ci.idCita = i.idCita
+end;
+
+
+-- EJERCICIO 3
+
 -- Registrar Cambios en Información del Cliente/Paciente: Crea un AFTER 
 -- UPDATE Trigger en una tabla de clientes o pacientes que registre cualquier 
 -- cambio de información (nombre, dirección, teléfono) en una tabla de 
@@ -296,19 +362,57 @@ set ocupacionPaciente = 'mandilon'
 where idPaciente = 1;
 
 
--- EJERCICIO 5
--- Actualizar el Total de una Factura Después de Insertar Detalles: Crea un 
--- AFTER INSERT Trigger que actualice el total de una factura en la tabla de 
--- facturas después de que se inserte un nuevo detalle de factura. 
 
-select * from clinica.facturasprocedimientos;
-select * from clinica.detallesfacturasprocedimientos;
-select * from clinica.deta
+-- EEJERCICO 4
 
-create or alter trgActualizartotalFactura
-on clinica.facturasProcedimientos
+-- Crea un AFTER INSERT Trigger en la tabla consultas que, después de insertar un 
+-- registro de consulta médica, actualice automáticamente una tabla historialconsultas para registrar 
+-- el id del paciente, el id de la consulta y la fecha en la que se realizó la consulta. 
+-- Esta tabla servirá como un historial de consultas para cada paciente.
+
+create table clinica.historialconsultas (
+    idhistorial int primary key identity(1,1),
+    idpaciente int,
+    idconsulta int,
+    fechaconsulta datetime
+);
+
+
+create or alter trigger trgregistrarhistorialconsulta
+on clinica.consultas
 after insert
-as begin
-	
+as  
+begin
+    insert into clinica.historialconsultas (idpaciente, idconsulta, fechaconsulta)
+    select ci.idpaciente, i.idConsulta, getdate()
+	from inserted i
+	inner join clinica.citas  ci on ci.idCita = i.idCita
+end;
 
+
+-- EJERCICIO 5
+
+-- Crea un AFTER UPDATE Trigger en la tabla citas que, después de
+-- actualizar el estado de una consulta médica (por ejemplo, de "pendiente" 
+-- a "completada"), registre este cambio en una tabla historialestadocitas. 
+-- Esta tabla servirá para llevar un control de los cambios de estado de cada cita.
+
+
+create table clinica.historialEstadoConsulta (
+    idhistorial int primary key identity(1,1),
+    idcita int,
+    estadoanterior varchar(50),
+    estadonuevo varchar(50),
+    fechacambio datetime
+);
+
+create or alter trigger trgregistrarcambeestado
+on clinica.consultas
+after update
+as begin
+    insert into clinica.historialEstadoConsulta (idcita, estadoanterior, estadonuevo, fechacambio)
+    select i.idcita, d.estadoConsulta as estadoanterior, i.estadoConsulta as estadonuevo, getdate()
+    from inserted i
+    inner join deleted d on i.idcita = d.idcita
+    where d.estadoConsulta <> i.estadoConsulta; 
 end;
