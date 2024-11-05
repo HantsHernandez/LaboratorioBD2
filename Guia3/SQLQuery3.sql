@@ -106,4 +106,107 @@ values (next value for recetaNumeroSeq, 1, 'Amoxicilina 500mg, tomar cada 8 hora
 select  * from recetasSeq;
 
 
+-- CYCLE
+
+-- 1. Numero de Factura para Consultas con Secuencia 
+create sequence facturaNumSeq
+    start with 1
+    increment by 1
+    maxvalue 9999
+    cycle;
+
+create table Facturas (
+    numero int primary key,
+    fecha date,
+    monto decimal(10, 2),
+    descripcion varchar(255)
+);
+
+insert into Facturas (numero, fecha, monto, descripcion)
+values (next value for facturaNumSeq, getdate(), 250.50, 'Consulta de cardiología');
+
+select * from Facturas;
+
+
+-- 2. numeros de consulta
+create sequence consultaNumeroSeq
+    start with 1
+    increment by 1
+    maxvalue 100
+    cycle;
+
+create table consultasSeq (
+    numero int primary key,
+    idPaciente int,
+    fecha date,
+    descripcion varchar(255),
+    foreign key (idPaciente) references  pacienteseq(id)
+);
+
+insert into consultasSeq (numero, idPaciente, fecha, descripcion)
+values (next value for consultaNumeroSeq, 1, '2024-01-10', 'Consulta general');
+	
+select * from consultasSeq;
+
+
+-- 3. Secuencia de Procedimientos Medicos
+create table procedimientosseq (
+    id int primary key,
+    nombre varchar(100)
+);
+
+create sequence procedimientosseq1
+    start with 1
+    increment by 1
+    minvalue 1
+    maxvalue 5000
+    cycle;
+
+insert into procedimientosseq (id, nombre)
+values (next value for procedimientosseq1, 'Consulta General'),
+       (next value for procedimientosseq1, 'Radiografía');
+
+select * from procedimientosseq;
+
+
+-- 4. Secuencia de Tratamientos
+create table tratamientosseq (
+    codigo int primary key,
+    descripcion varchar(100)
+);
+
+create sequence tratamientosseq1
+    start with 2000
+    increment by 5
+    minvalue 2000
+    maxvalue 10000
+    cycle;
+
+insert into tratamientosseq (codigo, descripcion)
+values (next value for tratamientosseq1, 'Terapia Física'),
+       (next value for tratamientosseq1, 'Tratamiento Dental');
+
+select * from tratamientosseq;
+
+-- 5. Secuencia de Numeros de Factura
+create table facturasseq (
+    numero int primary key,
+    id_paciente int,
+    fecha date,
+    total decimal(10, 2),
+    foreign key (id_paciente) references pacienteseq(id)
+);
+
+create sequence facturasseq1
+    start with 10001
+    increment by 1
+    minvalue 10001
+    maxvalue 99999
+    cycle;
+
+insert into facturasseq (numero, id_paciente, fecha, total)
+values (next value for facturasseq1, 1, '2024-02-10', 150.00);
+
+select * from facturasseq;
+
 
